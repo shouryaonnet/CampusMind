@@ -1,3 +1,4 @@
+
 package com.campusmind.backend.config;
 
 import com.campusmind.backend.security.JwtAuthenticationFilter;
@@ -31,7 +32,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
-        throws Exception {
+            throws Exception {
 
         http
             .cors(Customizer.withDefaults())
@@ -42,15 +43,33 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
-               .requestMatchers(
-    "/api/health",
-    "/actuator/health",
-    "/api/auth/register",
-    "/api/auth/login"
-).permitAll()
+
+                .requestMatchers(
+                    "/api/health",
+                    "/actuator/health",
+                    "/api/auth/register",
+                    "/api/auth/login"
+                ).permitAll()
 
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                // Must come before the public document GET matchers.
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/documents/my"
+                ).authenticated()
+
+                // Public document browsing and file access.
+                // Private documents are checked inside DocumentService.
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/api/documents",
+                    "/api/documents/*",
+                    "/api/documents/*/download",
+                    "/api/documents/*/preview"
+                ).permitAll()
+
+                // Upload, delete and all other endpoints require JWT.
                 .anyRequest().authenticated()
             )
 
