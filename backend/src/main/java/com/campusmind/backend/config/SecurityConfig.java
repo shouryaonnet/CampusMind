@@ -44,23 +44,24 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
+                // Public health, info and authentication endpoints
                 .requestMatchers(
                     "/api/health",
                     "/actuator/health",
+                    "/actuator/info",
                     "/api/auth/register",
                     "/api/auth/login"
                 ).permitAll()
 
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                // Must come before the public document GET matchers.
+                // User's private documents
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/documents/my"
                 ).authenticated()
 
-                // Public document browsing and file access.
-                // Private documents are checked inside DocumentService.
+                // Public document browsing and file access
                 .requestMatchers(
                     HttpMethod.GET,
                     "/api/documents",
@@ -69,7 +70,7 @@ public class SecurityConfig {
                     "/api/documents/*/preview"
                 ).permitAll()
 
-                // Upload, delete and all other endpoints require JWT.
+                // All remaining endpoints require authentication
                 .anyRequest().authenticated()
             )
 
