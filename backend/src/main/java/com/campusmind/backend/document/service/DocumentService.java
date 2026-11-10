@@ -1,3 +1,4 @@
+
 package com.campusmind.backend.document.service;
 
 import com.campusmind.backend.document.dto.DocumentResponse;
@@ -58,6 +59,39 @@ public class DocumentService {
             String email
     ) {
 
+        // Validate PDF file
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Please upload a PDF file"
+            );
+        }
+
+        if (file.getSize() > 25L * 1024 * 1024) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "PDF file size must not exceed 25 MB"
+            );
+        }
+
+        if (!"application/pdf".equalsIgnoreCase(file.getContentType())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only PDF files are allowed"
+            );
+        }
+
+        String originalFilename = file.getOriginalFilename();
+
+        if (originalFilename == null
+                || !originalFilename.toLowerCase().endsWith(".pdf")) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "File must have a .pdf extension"
+            );
+        }
+
+        // Validate document metadata
         if (title == null || title.isBlank()
                 || title.length() > 200) {
             throw new ResponseStatusException(
@@ -110,6 +144,7 @@ public class DocumentService {
             document.setSemester(semester);
             document.setAcademicYear(academicYear.trim());
             document.setDocumentType(documentType);
+
             document.setVisibility(
                     visibility == null
                             ? DocumentVisibility.PUBLIC
@@ -117,7 +152,7 @@ public class DocumentService {
             );
 
             document.setOriginalFileName(
-                    Path.of(file.getOriginalFilename())
+                    Path.of(originalFilename)
                             .getFileName()
                             .toString()
             );

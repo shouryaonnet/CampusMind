@@ -1,3 +1,4 @@
+
 package com.campusmind.backend.document.dto;
 
 import com.campusmind.backend.document.entity.Document;
@@ -18,6 +19,7 @@ public record DocumentResponse(
         DocumentVisibility visibility,
         String originalFileName,
         Long fileSize,
+        Double fileSizeInMB,
         String uploadedBy,
         LocalDateTime createdAt
 ) {
@@ -35,6 +37,9 @@ public record DocumentResponse(
                 document.getVisibility(),
                 document.getOriginalFileName(),
                 document.getFileSize(),
+                Math.round(
+                        document.getFileSize() / (1024.0 * 1024.0) * 100.0
+                ) / 100.0,
                 document.getUploadedBy().getFullName(),
                 document.getCreatedAt()
         );
