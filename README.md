@@ -21,6 +21,12 @@ name is unknown.
 CampusMind provides a searchable collection of academic documents and
 ranks results according to the relevance of their contents.
 
+
+## Intended Users
+
+- **Students:** Find academic notes, lecture materials, syllabi, and previous-year question papers through content-based search.
+- **Administrators:** Upload, manage, and review academic documents to maintain an organized resource collection.
+
 ## Key Features
 
 -   **Full-text PDF search:** Search inside PDF content, not just titles
