@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   UserRound,
   Mail,
@@ -8,25 +9,51 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+
 import AuthShell from "@/components/auth/AuthShell";
+import { registerUser, saveToken } from "@/lib/api";
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError("");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match. Please try again.");
       return;
     }
 
-    setError("");
-    alert("Registration UI is ready. Backend registration will be connected later.");
+    setLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+
+    const fullName = String(formData.get("fullName"));
+    const email = String(formData.get("email"));
+
+    try {
+      const response = await registerUser(fullName, email, password);
+
+      saveToken(response.token);
+
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Registration failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -40,7 +67,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
-            htmlFor="name"
+            htmlFor="fullName"
             className="mb-2 block text-sm font-medium text-slate-700"
           >
             Full name
@@ -48,12 +75,15 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 transition focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50">
             <UserRound size={17} className="shrink-0 text-slate-400" />
+
             <input
-              id="name"
-              name="name"
+              id="fullName"
+              name="fullName"
               type="text"
               autoComplete="name"
               required
+              minLength={2}
+              maxLength={100}
               placeholder="Enter your full name"
               className="h-12 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
@@ -70,6 +100,7 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 transition focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50">
             <Mail size={17} className="shrink-0 text-slate-400" />
+
             <input
               id="email"
               name="email"
@@ -92,6 +123,7 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 transition focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50">
             <LockKeyhole size={17} className="shrink-0 text-slate-400" />
+
             <input
               id="password"
               name="password"
@@ -99,11 +131,13 @@ export default function RegisterPage() {
               autoComplete="new-password"
               required
               minLength={8}
+              maxLength={100}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="At least 8 characters"
               className="h-12 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
+
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
@@ -125,6 +159,7 @@ export default function RegisterPage() {
 
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 px-3.5 transition focus-within:border-indigo-400 focus-within:ring-4 focus-within:ring-indigo-50">
             <LockKeyhole size={17} className="shrink-0 text-slate-400" />
+
             <input
               id="confirmPassword"
               name="confirmPassword"
@@ -137,6 +172,7 @@ export default function RegisterPage() {
               placeholder="Re-enter your password"
               className="h-12 w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
+
             <button
               type="button"
               onClick={() => setShowConfirmPassword((value) => !value)}
@@ -145,7 +181,11 @@ export default function RegisterPage() {
               }
               className="shrink-0 text-slate-400 transition hover:text-slate-700"
             >
-              {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              {showConfirmPassword ? (
+                <EyeOff size={17} />
+              ) : (
+                <Eye size={17} />
+              )}
             </button>
           </div>
         </div>
@@ -162,6 +202,7 @@ export default function RegisterPage() {
             required
             className="mt-1 accent-slate-900"
           />
+
           <span>
             I agree to the terms of use and understand how CampusMind handles
             academic documents and account information.
@@ -170,9 +211,10 @@ export default function RegisterPage() {
 
         <button
           type="submit"
-          className="w-full rounded-xl bg-slate-900 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200"
+          disabled={loading}
+          className="w-full rounded-xl bg-slate-900 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-slate-200"
         >
-          Create account
+          {loading ? "Creating account..." : "Create account"}
         </button>
       </form>
 
