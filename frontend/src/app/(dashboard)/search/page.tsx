@@ -1,111 +1,96 @@
+
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Search,
   FileText,
   SlidersHorizontal,
-  Bookmark,
-  ArrowUpRight,
   BookOpen,
+  Loader2,
 } from "lucide-react";
-
-const documents = [
-  {
-    id: "1",
-    title: "Data Structures and Algorithms",
-    subject: "Computer Science",
-    type: "Lecture Notes",
-    semester: "Semester 3",
-    pages: 42,
-    year: 2025,
-    description:
-      "Arrays, linked lists, stacks, queues, trees and fundamental algorithms.",
-  },
-  {
-    id: "2",
-    title: "Database Management Systems",
-    subject: "Database",
-    type: "Study Material",
-    semester: "Semester 4",
-    pages: 68,
-    year: 2025,
-    description:
-      "Database normalization, SQL queries, transactions and relational models.",
-  },
-  {
-    id: "3",
-    title: "Computer Networks Question Bank",
-    subject: "Networking",
-    type: "Question Paper",
-    semester: "Semester 4",
-    pages: 12,
-    year: 2024,
-    description:
-      "Important networking questions covering TCP/IP, routing and protocols.",
-  },
-  {
-    id: "4",
-    title: "Operating Systems Notes",
-    subject: "Computer Science",
-    type: "Lecture Notes",
-    semester: "Semester 5",
-    pages: 55,
-    year: 2025,
-    description:
-      "Processes, threads, CPU scheduling, memory management and deadlocks.",
-  },
-  {
-    id: "5",
-    title: "Introduction to Machine Learning",
-    subject: "Artificial Intelligence",
-    type: "Research Paper",
-    semester: "Semester 6",
-    pages: 34,
-    year: 2024,
-    description:
-      "An introduction to supervised learning, classification and regression.",
-  },
-];
+import {
+  getPublicDocuments,
+  DocumentResponse,
+} from "@/lib/api";
 
 const categories = [
   "All documents",
-  "Lecture Notes",
-  "Study Material",
-  "Question Paper",
-  "Research Paper",
+  "NOTES",
+  "QUESTION_PAPER",
+  "ASSIGNMENT",
+  "SYLLABUS",
+  "BOOK",
+  "OTHER",
 ];
+
+function formatType(type: string) {
+  return type.replaceAll("_", " ").toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [category, setCategory] = useState("All documents");
-  const [sort, setSort] = useState("relevance");
+  const [documents, setDocuments] = useState<DocumentResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const results = useMemo(() => {
-    let filtered = documents.filter((doc) => {
-      const matchesQuery =
-        !query ||
-        `${doc.title} ${doc.subject} ${doc.description}`
-          .toLowerCase()
-          .includes(query.toLowerCase());
+  useEffect(() => {
+    let active = true;
 
-      const matchesCategory =
-        category === "All documents" || doc.type === category;
+    async function loadDocuments() {
+      setLoading(true);
+      setError("");
 
-      return matchesQuery && matchesCategory;
-    });
+      try {
+        const response = await getPublicDocuments(
+          0,
+          100,
+          submittedQuery
+        );
 
-    if (sort === "newest") {
-      filtered = [...filtered].sort((a, b) => b.year - a.year);
+        if (!active) return;
+
+        setDocuments(response.content);
+        setTotal(response.totalElements);
+      } catch (err) {
+        if (!active) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load documents."
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
     }
 
-    if (sort === "oldest") {
-      filtered = [...filtered].sort((a, b) => a.year - b.year);
-    }
+    loadDocuments();
 
-    return filtered;
-  }, [query, category, sort]);
+    return () => {
+      active = false;
+    };
+  }, [submittedQuery]);
+
+  const filteredDocuments = documents.filter((doc) =>
+    category === "All documents" || doc.documentType === category
+  );
+
+  function handleSearch(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSubmittedQuery(query.trim());
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-5 py-8 sm:px-8">
@@ -117,29 +102,26 @@ export default function SearchPage() {
           Search academic documents
         </h1>
         <p className="mt-2 text-sm text-slate-500">
-          Find relevant information across lecture notes, PDFs and research
-          papers.
+          Find public academic PDFs by title, subject or description.
         </p>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <form
-          onSubmit={(e) => e.preventDefault()}
-          className="flex flex-col gap-3 sm:flex-row"
-        >
+        <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
           <div className="flex flex-1 items-center gap-3 rounded-xl border border-slate-200 px-4">
             <Search size={19} className="shrink-0 text-slate-400" />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search topics, concepts or documents..."
+              placeholder="Search topics, subjects or documents..."
               className="h-12 w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
             />
           </div>
 
           <button
             type="submit"
-            className="flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
+            disabled={loading}
+            className="flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
           >
             <Search size={17} />
             Search
@@ -158,7 +140,7 @@ export default function SearchPage() {
                   : "border-slate-200 text-slate-600 hover:border-slate-400"
               }`}
             >
-              {item}
+              {item === "All documents" ? item : formatType(item)}
             </button>
           ))}
         </div>
@@ -170,97 +152,87 @@ export default function SearchPage() {
             Search results
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {results.length} documents found
+            {loading ? "Searching..." : `${filteredDocuments.length} of ${total} documents`}
           </p>
         </div>
-
-        <select
-          value={sort}
-          onChange={(e) => setSort(e.target.value)}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none"
-        >
-          <option value="relevance">Sort by relevance</option>
-          <option value="newest">Newest first</option>
-          <option value="oldest">Oldest first</option>
-        </select>
       </div>
 
-      <div className="space-y-3">
-        {results.map((doc) => (
-          <div
-            key={doc.id}
-            className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm"
-          >
-            <div className="flex flex-col justify-between gap-4 sm:flex-row">
+      {error && (
+        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center rounded-2xl border border-slate-200 bg-white p-12">
+          <Loader2 className="animate-spin text-violet-600" size={28} />
+        </div>
+      ) : filteredDocuments.length > 0 ? (
+        <div className="space-y-3">
+          {filteredDocuments.map((doc) => (
+            <div
+              key={doc.id}
+              className="rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-sm"
+            >
               <div className="flex gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
                   <FileText size={23} />
                 </div>
 
-                <div>
-                  <Link
-                    href={`/documents/${doc.id}`}
-                    className="font-semibold text-slate-900 hover:text-violet-700"
-                  >
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-slate-900">
                     {doc.title}
-                  </Link>
+                  </h3>
 
                   <div className="mt-2 flex flex-wrap gap-2 text-xs text-slate-500">
-                    <span>{doc.type}</span>
+                    <span>{formatType(doc.documentType)}</span>
                     <span>·</span>
                     <span>{doc.subject}</span>
                     <span>·</span>
-                    <span>{doc.pages} pages</span>
+                    <span>Semester {doc.semester}</span>
+                    <span>·</span>
+                    <span>{doc.academicYear}</span>
                   </div>
 
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500">
-                    {doc.description}
+                    {doc.description || "No description provided."}
                   </p>
 
-                  <p className="mt-3 text-xs text-slate-400">
-                    {doc.semester} · {doc.year}
-                  </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                    <span>Uploaded by {doc.uploadedBy}</span>
+                    <span>{formatDate(doc.createdAt)}</span>
+                    <span>{doc.fileSizeInMB.toFixed(2)} MB</span>
+                  </div>
+
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL}/api/documents/${doc.id}/preview`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-violet-700"
+                  >
+                    Preview PDF
+                  </a>
                 </div>
               </div>
-
-              <div className="flex shrink-0 items-center gap-2 sm:self-start">
-                <button
-                  title="Save document"
-                  onClick={() =>
-                    alert("Saving documents will be enabled after login integration.")
-                  }
-                  className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
-                >
-                  <Bookmark size={17} />
-                </button>
-
-                <Link
-                  href={`/documents/${doc.id}`}
-                  className="flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-violet-700"
-                >
-                  View
-                  <ArrowUpRight size={15} />
-                </Link>
-              </div>
             </div>
-          </div>
-        ))}
-
-        {results.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-16 text-center">
-            <BookOpen className="mx-auto text-slate-400" size={30} />
-            <h3 className="mt-4 font-semibold text-slate-900">
-              No documents found
-            </h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Try another keyword or select a different category.
-            </p>
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-16 text-center">
+          <BookOpen className="mx-auto text-slate-400" size={30} />
+          <h3 className="mt-4 font-semibold text-slate-900">
+            No documents found
+          </h3>
+          <p className="mt-2 text-sm text-slate-500">
+            {error
+              ? "Check your backend connection and try again."
+              : "Try another keyword or upload a public PDF."}
+          </p>
+        </div>
+      )}
 
       <p className="text-center text-xs text-slate-400">
-        You can explore public documents without creating an account.
+        Public documents can be explored without creating an account.
       </p>
     </div>
   );

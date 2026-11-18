@@ -1,3 +1,4 @@
+
 package com.campusmind.backend.document.repository;
 
 import com.campusmind.backend.document.entity.Document;
@@ -13,30 +14,23 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 import java.util.UUID;
 
-public interface DocumentRepository
-        extends JpaRepository<Document, UUID> {
+public interface DocumentRepository extends JpaRepository<Document, UUID> {
 
-    Page<Document> findByUploadedBy(
-            User user,
-            Pageable pageable
-    );
+    Page<Document> findByUploadedBy(User user, Pageable pageable);
 
-    Optional<Document> findByIdAndUploadedBy(
-            UUID id,
-            User user
-    );
+    Optional<Document> findByIdAndUploadedBy(UUID id, User user);
 
     @Query("""
         SELECT d FROM Document d
         WHERE d.visibility = :visibility
         AND (
-            :query IS NULL
+            :query = ''
             OR LOWER(d.title) LIKE LOWER(CONCAT('%', :query, '%'))
             OR LOWER(d.subject) LIKE LOWER(CONCAT('%', :query, '%'))
-            OR LOWER(d.description) LIKE LOWER(CONCAT('%', :query, '%'))
+            OR LOWER(COALESCE(d.description, '')) LIKE LOWER(CONCAT('%', :query, '%'))
         )
         AND (
-            :subject IS NULL
+            :subject = ''
             OR LOWER(d.subject) = LOWER(:subject)
         )
         AND (
@@ -45,10 +39,10 @@ public interface DocumentRepository
         )
     """)
     Page<Document> searchPublicDocuments(
-            @Param("visibility") DocumentVisibility visibility,
-            @Param("query") String query,
-            @Param("subject") String subject,
-            @Param("semester") Integer semester,
-            Pageable pageable
+        @Param("visibility") DocumentVisibility visibility,
+        @Param("query") String query,
+        @Param("subject") String subject,
+        @Param("semester") Integer semester,
+        Pageable pageable
     );
 }

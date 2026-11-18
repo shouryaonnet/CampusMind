@@ -1,6 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bell,
   ChevronDown,
@@ -10,14 +13,39 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { useState } from "react";
+import { getCurrentUser, removeToken, UserResponse } from "@/lib/api";
 
 export default function Topbar() {
+  const router = useRouter();
+
   const [profileOpen, setProfileOpen] = useState(false);
+  const [user, setUser] = useState<UserResponse | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => {
+        removeToken();
+        router.replace("/login");
+      });
+  }, [router]);
+
+  const handleLogout = () => {
+    removeToken();
+    router.replace("/login");
+  };
+
+  const initials = user?.fullName
+    ? user.fullName
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "U";
 
   return (
     <header className="sticky top-0 z-30 flex h-[76px] items-center justify-between border-b border-slate-200 bg-white/90 px-5 backdrop-blur-xl sm:px-8">
-
       <div className="flex items-center gap-4">
         <button className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden">
           <Menu size={21} />
@@ -37,7 +65,6 @@ export default function Topbar() {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-5">
-
         <Link
           href="/search"
           className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-400 transition hover:border-indigo-200 sm:flex"
@@ -62,16 +89,16 @@ export default function Topbar() {
             onClick={() => setProfileOpen(!profileOpen)}
             className="flex items-center gap-2 rounded-xl p-1.5 transition hover:bg-slate-50"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700">
-              <UserRound size={18} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">
+              {initials}
             </div>
 
             <div className="hidden text-left sm:block">
               <p className="text-xs font-bold text-slate-800">
-                Student User
+                {user?.fullName || "Loading..."}
               </p>
               <p className="text-[10px] text-slate-400">
-                Student account
+                {user?.email || ""}
               </p>
             </div>
 
@@ -79,9 +106,10 @@ export default function Topbar() {
           </button>
 
           {profileOpen && (
-            <div className="absolute right-0 top-14 w-48 rounded-xl border border-slate-100 bg-white p-2 shadow-xl">
+            <div className="absolute right-0 top-14 w-52 rounded-xl border border-slate-100 bg-white p-2 shadow-xl">
               <Link
                 href="/profile"
+                onClick={() => setProfileOpen(false)}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-slate-600 hover:bg-slate-50"
               >
                 <UserRound size={16} />
@@ -90,6 +118,7 @@ export default function Topbar() {
 
               <Link
                 href="/settings"
+                onClick={() => setProfileOpen(false)}
                 className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-slate-600 hover:bg-slate-50"
               >
                 <Settings size={16} />
@@ -98,13 +127,13 @@ export default function Topbar() {
 
               <div className="my-1 border-t border-slate-100" />
 
-              <Link
-                href="/login"
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-red-500 hover:bg-red-50"
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-xs text-red-500 hover:bg-red-50"
               >
                 <LogOut size={16} />
                 Log out
-              </Link>
+              </button>
             </div>
           )}
         </div>
